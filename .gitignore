@@ -1,0 +1,9 @@
+# local-only material: generated CA keys, credentials, build artefacts
+pki/
+.secrets/
+build/
+.env.local
+# customer briefing files
+/prompt.txt
+/answers.txt
+/review.txt
