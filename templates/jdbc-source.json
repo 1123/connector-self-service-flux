@@ -14,7 +14,7 @@
       "tls": { "secretRef": "demo-ca" }
     },
     "configs": {
-      "table.include.list": "<<TABLE>>",
+      "table.whitelist": "<<TABLE>>",
       "mode": "<<MODE>>",
       "incrementing.column.name": "<<INCREMENTING_COLUMN>>",
       "timestamp.column.name": "<<TIMESTAMP_COLUMN>>",

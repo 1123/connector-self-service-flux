@@ -23,7 +23,7 @@
       }
     },
     "configs": {
-      "table.include.list": "customers",
+      "table.whitelist": "customers",
       "mode": "timestamp+incrementing",
       "incrementing.column.name": "id",
       "timestamp.column.name": "updated_at",
