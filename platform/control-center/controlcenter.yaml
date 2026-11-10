@@ -48,6 +48,10 @@ spec:
         dataVolumeCapacity: 10Gi
     alertmanager:
       image: confluentinc/cp-enterprise-alertmanager:2.7.0
+  configOverrides:
+    server:
+      # The auto-generated cert only covers cluster DNS names; allow https://localhost:9021 via port-forward.
+      - confluent.controlcenter.rest.sni.host.check.enabled=false
   podTemplate:
     resources:
       requests: { cpu: 500m, memory: 3Gi }
