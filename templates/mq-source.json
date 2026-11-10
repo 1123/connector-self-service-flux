@@ -1,0 +1,31 @@
+{
+  "apiVersion": "platform.confluent.io/v1beta1",
+  "kind": "Connector",
+  "metadata": {
+    "name": "<<CONNECTOR_NAME>>",
+    "namespace": "confluent"
+  },
+  "spec": {
+    "class": "com.ibm.eventstreams.connect.mqsource.MQSourceConnector",
+    "taskMax": 1,
+    "connectClusterRef": { "name": "connect" },
+    "connectRest": {
+      "authentication": { "type": "basic", "basic": { "secretRef": "connect-rest-client" } },
+      "tls": { "secretRef": "demo-ca" }
+    },
+    "configs": {
+      "mq.queue": "<<QUEUE>>",
+      "topic": "<<TOPIC>>",
+      "mq.queue.manager": "QM1",
+      "mq.connection.name.list": "ibm-mq.mq.svc.cluster.local(1414)",
+      "mq.channel.name": "DEV.APP.SVRCONN",
+      "mq.user.name": "${directory:/mnt/secrets/mq-credentials:username}",
+      "mq.password": "${directory:/mnt/secrets/mq-credentials:password}",
+      "mq.record.builder": "com.ibm.eventstreams.connect.mqsource.builders.DefaultRecordBuilder",
+      "mq.message.body.jms": "true",
+      "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+      "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+      "producer.override.sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"<<CONNECTOR_NAME>>\" password=\"${directory:/mnt/secrets/connector-kafka-credentials:<<CONNECTOR_NAME>>}\";"
+    }
+  }
+}

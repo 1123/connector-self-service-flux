@@ -1,0 +1,44 @@
+{
+  "apiVersion": "platform.confluent.io/v1beta1",
+  "kind": "Connector",
+  "metadata": {
+    "name": "pg-customers-source",
+    "namespace": "confluent"
+  },
+  "spec": {
+    "class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "taskMax": 1,
+    "connectClusterRef": {
+      "name": "connect"
+    },
+    "connectRest": {
+      "authentication": {
+        "type": "basic",
+        "basic": {
+          "secretRef": "connect-rest-client"
+        }
+      },
+      "tls": {
+        "secretRef": "demo-ca"
+      }
+    },
+    "configs": {
+      "table.include.list": "customers",
+      "mode": "timestamp+incrementing",
+      "incrementing.column.name": "id",
+      "timestamp.column.name": "updated_at",
+      "topic.prefix": "jdbc-",
+      "transforms": "route",
+      "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+      "transforms.route.regex": ".*",
+      "transforms.route.replacement": "pg.customers",
+      "connection.url": "jdbc:postgresql://postgres.postgres.svc.cluster.local:5432/demo",
+      "connection.user": "${directory:/mnt/secrets/postgres-credentials:username}",
+      "connection.password": "${directory:/mnt/secrets/postgres-credentials:password}",
+      "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter.schemas.enable": "true",
+      "producer.override.sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"pg-customers-source\" password=\"${directory:/mnt/secrets/connector-kafka-credentials:pg-customers-source}\";"
+    }
+  }
+}
