@@ -1,0 +1,4 @@
+* Queues read by MQ source connectors. The developer configuration of the image grants the "app"
+* user (group mqclient) access to DEV.** only, so connector queues get an explicit authority record.
+DEFINE QLOCAL('ORDERS.IN') REPLACE
+SET AUTHREC PROFILE('ORDERS.**') OBJTYPE(QUEUE) GROUP('mqclient') AUTHADD(BROWSE,GET,INQ,PUT)

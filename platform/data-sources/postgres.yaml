@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: postgres }
+spec:
+  selector: { app: postgres }
+  ports: [ { name: postgres, port: 5432, targetPort: 5432 } ]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: postgres, namespace: postgres }
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18.6
+          ports: [ { containerPort: 5432 } ]
+          env:
+            - { name: POSTGRES_DB, value: demo }
+            - { name: POSTGRES_USER, value: postgres }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: admin-password } }
+            - name: CONNECT_DB_USER
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: connect-username } }
+            - name: CONNECT_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: connect-password } }
+          readinessProbe:
+            exec: { command: [ pg_isready, -U, postgres, -d, demo ] }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql }      # PG 18 image layout
+            - { name: init, mountPath: /docker-entrypoint-initdb.d }
+      volumes:
+        - name: init
+          configMap: { name: postgres-init, defaultMode: 0755 }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ ReadWriteOnce ]
+        storageClassName: premium-rwo
+        resources: { requests: { storage: 5Gi } }

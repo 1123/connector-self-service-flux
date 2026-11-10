@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - postgres.yaml
+  - ibm-mq.yaml
+configMapGenerator:
+  - name: postgres-init
+    namespace: postgres
+    files: [ postgres-init.sh ]
+  - name: mq-config
+    namespace: mq
+    files: [ 20-connector-queues.mqsc ]

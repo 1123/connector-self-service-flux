@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata: { name: ibm-mq, namespace: mq }
+spec:
+  selector: { app: ibm-mq }
+  ports: [ { name: listener, port: 1414, targetPort: 1414 } ]
+---
+# IBM MQ developer image: queue manager QM1, channel DEV.APP.SVRCONN, user "app" (password from Vault).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: ibm-mq, namespace: mq }
+spec:
+  serviceName: ibm-mq
+  replicas: 1
+  selector: { matchLabels: { app: ibm-mq } }
+  template:
+    metadata: { labels: { app: ibm-mq } }
+    spec:
+      securityContext: { fsGroup: 0 }
+      containers:
+        - name: qmgr
+          image: icr.io/ibm-messaging/mq:9.4.5.1-r1
+          env:
+            - { name: LICENSE, value: accept }
+            - { name: MQ_QMGR_NAME, value: QM1 }
+            - { name: MQ_DEV, value: "true" }
+          ports: [ { containerPort: 1414 } ]
+          readinessProbe:
+            exec: { command: [ chkmqready ] }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: data, mountPath: /mnt/mqm }
+            - { name: credentials, mountPath: /run/secrets, readOnly: true }
+            - { name: config, mountPath: /etc/mqm/20-connector-queues.mqsc, subPath: 20-connector-queues.mqsc }
+      volumes:
+        - name: credentials
+          secret: { secretName: mq-credentials }
+        - name: config
+          configMap: { name: mq-config }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ ReadWriteOnce ]
+        storageClassName: premium-rwo
+        resources: { requests: { storage: 5Gi } }
