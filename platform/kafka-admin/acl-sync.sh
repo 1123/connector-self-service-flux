@@ -23,6 +23,8 @@ want() { echo "$1|$2|$3|$4|$5|*|ALLOW" >> "$desired"; }
 # Connect workers: internal topics (_connect-configs/-offsets/-status) and the worker group.
 for op in READ WRITE DESCRIBE DESCRIBE_CONFIGS CREATE; do want User:connect TOPIC PREFIXED _connect- "$op"; done
 want User:connect GROUP LITERAL _connect READ
+# Confluent license check run by the worker whenever a connector starts.
+for op in READ WRITE DESCRIBE DESCRIBE_CONFIGS CREATE; do want User:connect TOPIC LITERAL _confluent-command "$op"; done
 
 while read -r name type topics; do
   [[ -z "$name" ]] && continue
