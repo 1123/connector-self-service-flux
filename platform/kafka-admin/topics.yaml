@@ -1,0 +1,17 @@
+# Admin-managed topics. Developers reference these topics in their connectors; they cannot create topics
+# (auto.create.topics.enable=false, Connect topic.creation.enable=false, no CREATE ACLs for connectors).
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaTopic
+metadata: { name: mq.orders, namespace: confluent }
+spec:
+  replicas: 3
+  partitionCount: 3
+  kafkaRestClassRef: { name: kafka-rest }
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaTopic
+metadata: { name: pg.customers, namespace: confluent }
+spec:
+  replicas: 3
+  partitionCount: 3
+  kafkaRestClassRef: { name: kafka-rest }

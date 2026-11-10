@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-acl-sync
+  namespace: confluent
+  annotations:
+    kustomize.toolkit.fluxcd.io/force: enabled     # Job specs are immutable → re-create on change
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: render-registry
+          image: mikefarah/yq:4.54.3
+          command: [ sh, -c ]
+          args:
+            - yq '.connectors | to_entries | .[] | .key + " " + .value.type + " " + (.value.topics | join(","))'
+              /config/connector-registry.yaml > /work/connectors.txt && cat /work/connectors.txt
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: work, mountPath: /work }
+      containers:
+        - name: acl-sync
+          image: confluentinc/cp-server:8.4.1
+          command: [ bash, /config/acl-sync.sh ]
+          env:
+            - name: ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: kafka-admin-credentials, key: password } }
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: work, mountPath: /work }
+            - { name: ca, mountPath: /mnt/ca }
+      volumes:
+        - name: config
+          configMap: { name: kafka-acl-sync }
+        - name: work
+          emptyDir: {}
+        - name: ca
+          secret: { secretName: demo-ca }

@@ -1,0 +1,22 @@
+# Admin-owned connector registry – the single source of truth for connector identities.
+#
+#   <connector name>:            = Connector CR metadata.name = Kafka principal (User:<name>)
+#     type: mq-source | jdbc-source | jdbc-sink   (must match the template the CR is built from)
+#     topics: [...]              topics the connector may write (sources) or read (sinks)
+#
+# Consumed by
+#   * the ACL sync Job (acl-sync.sh)   → Kafka ACLs (anything not derived from this file is removed)
+#   * CI (ci/validate_connectors.py)   → a PR may only add connectors registered here, using only the
+#                                         registered topics and the connector's own credential
+# Each connector also needs a password in Vault (kv/kafka/connector-users, key = connector name):
+# scripts/onboard-connector.sh <name> creates it.
+connectors:
+  mq-orders-source:
+    type: mq-source
+    topics: [ mq.orders ]
+  pg-customers-source:
+    type: jdbc-source
+    topics: [ pg.customers ]
+  pg-customers-sink:
+    type: jdbc-sink
+    topics: [ pg.customers ]
