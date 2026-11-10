@@ -39,20 +39,21 @@ while read -r name type topics; do
 done < /work/connectors.txt
 sort -u -o "$desired" "$desired"
 
-acls --list | awk '
-  /^Current ACLs for resource/ {
-    match($0, /resourceType=[A-Z_]+/); rt = substr($0, RSTART + 13, RLENGTH - 13)
-    match($0, /name=[^,]+/);           n  = substr($0, RSTART + 5,  RLENGTH - 5)
-    match($0, /patternType=[A-Z]+/);   pt = substr($0, RSTART + 12, RLENGTH - 12)
-    next }
-  /principal=/ {
-    match($0, /principal=[^,]+/);       pr   = substr($0, RSTART + 10, RLENGTH - 10)
-    match($0, /host=[^,]+/);            h    = substr($0, RSTART + 5,  RLENGTH - 5)
-    match($0, /operation=[A-Z_]+/);     op   = substr($0, RSTART + 10, RLENGTH - 10)
-    match($0, /permissionType=[A-Z]+/); perm = substr($0, RSTART + 15, RLENGTH - 15)
-    print pr "|" rt "|" pt "|" n "|" op "|" h "|" perm }' | sort -u > "$current"
+# Parse "kafka-acls --list" output in plain bash (the cp-server image ships no awk).
+parse_acls() {
+  local line rt n pt re_res re_acl
+  re_res='resourceType=([A-Z_]+), name=([^,]+), patternType=([A-Z]+)'
+  re_acl='principal=([^,]+), host=([^,]+), operation=([A-Z_]+), permissionType=([A-Z]+)'
+  while IFS= read -r line; do
+    if [[ "$line" =~ $re_res ]]; then rt=${BASH_REMATCH[1]} n=${BASH_REMATCH[2]} pt=${BASH_REMATCH[3]}
+    elif [[ "$line" =~ $re_acl ]]; then
+      echo "${BASH_REMATCH[1]}|$rt|$pt|$n|${BASH_REMATCH[3]}|${BASH_REMATCH[2]}|${BASH_REMATCH[4]}"
+    fi
+  done
+}
+acls --list | parse_acls | sort -u > "$current"
 
-pascal() { echo "$1" | awk -F_ '{ for (i = 1; i <= NF; i++) printf "%s%s", substr($i,1,1), tolower(substr($i,2)) }'; }
+pascal() { local w out="" IFS=_; for w in $1; do w=${w,,}; out+=${w^}; done; echo "$out"; }
 apply() { # add|remove key
   local pr rt pt n op h perm res=()
   IFS='|' read -r pr rt pt n op h perm <<< "$2"
