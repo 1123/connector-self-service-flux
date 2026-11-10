@@ -1,0 +1,125 @@
+# Flux reconciliation stages. Each stage waits (wait: true + health checks) until all of its
+# resources are actually ready before dependent stages are applied.
+#
+#   operators ─► secrets ─┬─► data-sources ───────────────┐
+#                         └─► kafka ─► kafka-admin ───────┴─► connect ─► connectors
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: operators
+  namespace: flux-system
+spec:
+  interval: 10m
+  timeout: 10m
+  path: ./platform/operators
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+---
+# Needs a bootstrapped (initialised + unsealed) Vault – see scripts/06-vault-bootstrap.sh.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: operators } ]
+  interval: 10m
+  timeout: 5m
+  path: ./platform/secrets
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: data-sources
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: secrets } ]
+  interval: 10m
+  timeout: 10m
+  path: ./platform/data-sources
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kafka
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: secrets } ]
+  interval: 10m
+  timeout: 20m
+  path: ./platform/kafka
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  healthCheckExprs:
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: KRaftController
+      current: status.phase == 'RUNNING'
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: Kafka
+      current: status.phase == 'RUNNING'
+---
+# Admin-managed Kafka objects: topics (KafkaTopic CRs) and ACLs (connector registry + ACL sync Job).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kafka-admin
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: kafka } ]
+  interval: 10m
+  timeout: 10m
+  path: ./platform/kafka-admin
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  healthCheckExprs:
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: KafkaTopic
+      current: status.state == 'CREATED'
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: connect
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: kafka-admin }, { name: data-sources } ]
+  interval: 10m
+  timeout: 15m
+  path: ./platform/connect
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  healthCheckExprs:
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: Connect
+      current: status.phase == 'RUNNING'
+---
+# Developer-owned connector definitions (one CFK Connector CR per JSON file).
+# prune: removing a JSON file deletes the Connector CR, and CFK then deletes the connector in Connect.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: connectors
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: connect } ]
+  interval: 2m
+  timeout: 5m
+  path: ./connectors
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  healthCheckExprs:
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: Connector
+      current: status.connectorState == 'RUNNING' && (!has(status.failedTasksCount) || status.failedTasksCount == 0)
+      failed: status.connectorState == 'FAILED'

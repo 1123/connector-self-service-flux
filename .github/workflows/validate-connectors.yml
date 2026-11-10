@@ -1,0 +1,26 @@
+# Offline validation of connector definitions. Deliberately credential-free: the job has no secrets,
+# no cluster/Vault/Kafka access and only read permission on the repository. Deployment happens
+# exclusively via Flux after an admin squash-merges into main.
+name: validate-connectors
+on:
+  pull_request:
+    branches: [ main ]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pull request (candidate)
+        uses: actions/checkout@v7
+        with: { path: candidate, persist-credentials: false }
+      - name: Checkout base branch (trusted validator, templates, registry)
+        uses: actions/checkout@v7
+        with: { ref: "${{ github.event.pull_request.base.sha }}", path: trusted, persist-credentials: false }
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.13" }
+      - run: pip install pyyaml==6.0.3
+      - name: Validate connectors against templates and registry
+        run: python trusted/ci/validate_connectors.py --trusted trusted --candidate candidate
+      - name: Render connectors with kustomize
+        run: kubectl kustomize candidate/connectors > /dev/null
