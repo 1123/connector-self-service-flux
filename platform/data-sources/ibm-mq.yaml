@@ -16,6 +16,8 @@ spec:
   template:
     metadata: { labels: { app: ibm-mq } }
     spec:
+      # Credentials are mounted at /run/secrets, which would clash with the token mount; MQ needs no API access.
+      automountServiceAccountToken: false
       securityContext: { fsGroup: 0 }
       containers:
         - name: qmgr
