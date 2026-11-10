@@ -1,0 +1,59 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: hashicorp
+  namespace: vault
+spec:
+  interval: 1h
+  url: https://helm.releases.hashicorp.com
+---
+# Single-node Vault with file storage and TLS (cert from the demo CA, secret vault-tls created by
+# scripts/05-bootstrap-secrets.sh). Vault starts sealed: scripts/06-vault-bootstrap.sh initialises,
+# unseals and configures it, therefore the release does not wait for pod readiness.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vault
+  namespace: vault
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: vault
+      version: 0.34.1            # Vault 2.0.4
+      sourceRef: { kind: HelmRepository, name: hashicorp }
+  install: { disableWait: true }
+  upgrade: { disableWait: true }
+  values:
+    global:
+      tlsDisable: false
+    injector:
+      enabled: false
+    ui:
+      enabled: false
+    server:
+      extraEnvironmentVars:
+        VAULT_CACERT: /vault/userconfig/vault-tls/ca.crt
+      volumes:
+        - name: vault-tls
+          secret: { secretName: vault-tls }
+      volumeMounts:
+        - name: vault-tls
+          mountPath: /vault/userconfig/vault-tls
+          readOnly: true
+      dataStorage:
+        enabled: true
+        size: 2Gi
+      standalone:
+        enabled: true
+        config: |
+          ui = false
+          listener "tcp" {
+            address         = "[::]:8200"
+            cluster_address = "[::]:8201"
+            tls_cert_file   = "/vault/userconfig/vault-tls/tls.crt"
+            tls_key_file    = "/vault/userconfig/vault-tls/tls.key"
+          }
+          storage "file" {
+            path = "/vault/data"
+          }

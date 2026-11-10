@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata: { name: confluent-operator }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: confluent }       # Kafka, KRaft, Connect, topics, connectors
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: external-secrets }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: vault }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: postgres }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: mq }
