@@ -2,6 +2,8 @@
 # Phase 7 – protect main and invite the developers (idempotent).
 # - main: PR required, 1 code-owner approval, stale approvals dismissed, CI job "validate" must pass
 #   (only accepted from GitHub Actions), branch up to date, linear history, no force-push / deletion.
+#   No "last push approval": with a single admin it would block fixes the admin pushes to a PR;
+#   dismiss_stale_reviews already forces re-approval after any new developer push.
 # - squash-merge only, head branches deleted after merge.
 # - developers (GH_DEVELOPERS) get push access, so they can open PRs from branches in this repo.
 # Caveat: on a personal repo every collaborator with push access may press "merge"; protection only
@@ -27,7 +29,7 @@ gh api -X PUT "repos/$R/branches/main/protection" --silent --input - <<EOF
     "required_approving_review_count": 1,
     "require_code_owner_reviews": true,
     "dismiss_stale_reviews": true,
-    "require_last_push_approval": true
+    "require_last_push_approval": false
   },
   "restrictions": null,
   "required_linear_history": true,
