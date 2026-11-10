@@ -21,6 +21,9 @@ spec:
       authentication:
         type: plain
         jaasConfig: { secretRef: kafka-plain-users }
+  dependencies:
+    metricsClient:                      # metrics for Control Center (Prometheus sidecar)
+      url: http://controlcenter.confluent.svc.cluster.local:9090
   configOverrides:
     jvm: [ -Xms768m, -Xmx768m ]
   podTemplate:

@@ -55,6 +55,7 @@ seed postgres/admin "$(jq -n --arg p "$PG_ADMIN_PASSWORD" '{password:$p}')"
 seed postgres/connect "$(jq -n --arg p "$PG_CONNECT_PASSWORD" '{username:"connect", password:$p}')"
 seed mq/admin "$(jq -n --arg p "$MQ_ADMIN_PASSWORD" '{password:$p}')"
 seed mq/app "$(jq -n --arg p "$MQ_APP_PASSWORD" '{username:"app", password:$p}')"
+seed kafka/control-center "$(jq -n --arg a "$(openssl rand -hex 20)" --arg v "$(openssl rand -hex 20)" '{"c3-admin":$a, "c3-viewer":$v}')"
 
 # One Kafka credential per registered connector.
 for name in $(yq '.connectors | keys | .[]' platform/kafka-admin/connector-registry.yaml); do

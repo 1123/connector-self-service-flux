@@ -103,6 +103,25 @@ spec:
       kind: Connect
       current: status.phase == 'RUNNING'
 ---
+# Monitoring UI (Control Center next-gen with Prometheus/Alertmanager sidecars).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: control-center
+  namespace: flux-system
+spec:
+  dependsOn: [ { name: connect } ]
+  interval: 10m
+  timeout: 15m
+  path: ./platform/control-center
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }
+  healthCheckExprs:
+    - apiVersion: platform.confluent.io/v1beta1
+      kind: ControlCenter
+      current: status.phase == 'RUNNING'
+---
 # Developer-owned connector definitions (one CFK Connector CR per JSON file).
 # prune: removing a JSON file deletes the Connector CR, and CFK then deletes the connector in Connect.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
