@@ -1,0 +1,29 @@
+# Flux Operator – used only for its read-only Flux Web UI (no FluxInstance: Flux itself stays as installed
+# by scripts/05-github-flux-bootstrap.sh). Access: kubectl -n flux-system port-forward svc/flux-operator 9080:9080
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: flux-operator
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 1h
+  url: oci://ghcr.io/controlplaneio-fluxcd/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flux-operator
+  namespace: flux-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: flux-operator
+      version: 0.62.1
+      sourceRef: { kind: HelmRepository, name: flux-operator }
+  install: { crds: CreateReplace }
+  upgrade: { crds: CreateReplace }
+  values:
+    web:
+      enabled: true                      # anonymous, read-only by default
